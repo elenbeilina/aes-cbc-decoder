@@ -97,7 +97,9 @@ public class MainFrame extends JFrame {
     }
 
     public void authenticateImage(Protector protector) {
-        protector.authenticatingImage(imagePanel.getImage());
+        repaint();
+        String distance = JOptionPane.showInputDialog(this, "Enter distance", PROGRAM_NAME, JOptionPane.INFORMATION_MESSAGE);
+        protector.authenticatingImage(imagePanel.getImage(), Integer.valueOf(distance));
         imagePanel.loadImage(imagePanel.getImage());
     }
 

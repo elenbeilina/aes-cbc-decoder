@@ -4,12 +4,15 @@ import components.Block;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.Date;
 
 public class Protector {
 
-    private static final int n = 3;
+    private static final int n = 15;
 
     public void protectImage(BufferedImage image) {
+
+        long start = new Date().getTime();
 
         int blockWidth = image.getWidth() / n;
         int blockHeight = image.getHeight() / n;
@@ -40,14 +43,18 @@ public class Protector {
 
             y += blockHeight;
         }
+
+        System.out.println("execution time:" + (new Date().getTime() - start));
     }
 
-    public void authenticatingImage(BufferedImage image){
+    public void authenticatingImage(BufferedImage image, Integer distance){
         int blockWidth = image.getWidth() / n;
         int blockHeight = image.getHeight() / n;
 
         int x;
         int y = 0;
+
+        long start = new Date().getTime();
 
         for (int i = 0; i < n; i++) {
             x = 0;
@@ -62,15 +69,16 @@ public class Protector {
                     Descriptor descriptor = new Descriptor();
                     String decryptedHash = descriptor.decodeTheImage(subImage).substring(0,64);
 
-                    int distance = comparison.distance(hash, decryptedHash);
-                    System.out.println("distance =" + distance);
+                    int computedDistance = comparison.distance(hash, decryptedHash);
 
                     //circle bad subBlock
-                    if(distance > 1){
+                    if(computedDistance > distance){
+                        System.out.println("distance =" + computedDistance + " hash " + decryptedHash);
+
                         Graphics2D g = (Graphics2D) image.getGraphics();
                         g.setColor(Color.RED);
-                        g.setStroke(new BasicStroke(5));
-                        g.drawOval(x, y, blockWidth, blockHeight);
+                        g.setStroke(new BasicStroke(2));
+                        g.drawOval(x, y, blockWidth-3, blockHeight-3);
                     }
 
                     x += blockWidth;
@@ -82,5 +90,6 @@ public class Protector {
 
             y += blockHeight;
         }
+        System.out.println("execution time:" + (new Date().getTime() - start));
     }
 }
