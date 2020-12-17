@@ -8,7 +8,7 @@ import java.awt.event.ActionEvent;
 public class AboutAction extends AbstractProgramMenuAction {
 	
 	public AboutAction(MainFrame owner) {
-		super(owner, "About...");
+		super(owner, "About");
 	}
 	
 	@Override

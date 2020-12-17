@@ -5,7 +5,7 @@ import java.awt.*;
 
 public class Parameters {
 
-    public static final String PROGRAM_NAME = "Image protector/authenticator";
+    public static final String PROGRAM_NAME = "aes-cbc-decoder";
     public static final String PROGRAM_AUTHOR = "Elena Beilina";
 
     public static int MAINFRAME_WIDTH = 550;

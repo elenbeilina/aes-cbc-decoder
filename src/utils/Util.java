@@ -1,25 +1,14 @@
 package utils;
 
-import components.ImagePanel;
-
-import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.DataBufferInt;
-import java.awt.image.WritableRaster;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 
 public class Util {
-    public static String MESSAGE_ENCRYPTION_ERROR = "Encryption error occurred";
     public static String MESSAGE_DECRYPTION_ERROR = "Decryption error occurred";
     public static String MESSAGE_UNEXPECTED_ERROR = "Unexpected error occurred";
     public static String MESSAGE_IO_ERROR = "I/O error occurred";
 
-    public static String MESSAGE_ENCRYPTION_COMPLETED = "Encryption completed";
-    public static String MESSAGE_SIMILARITIES_COMPLETED = "Perceptive hash and hamming distance analysis completed. \n\nDistance:";
+    public static String MESSAGE_DECRYPTION_COMPLETED = "Decryption completed";
 
     public static BufferedImage convertImage(BufferedImage originalImage) {
         int newImageType = originalImage.getType();
