@@ -2,6 +2,8 @@ package utils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Util {
     public static String MESSAGE_DECRYPTION_ERROR = "Decryption error occurred";
@@ -31,5 +33,11 @@ public class Util {
         g.drawImage(originalImage, 0, 0, null);
         g.dispose();
         return newImage;
+    }
+
+    public static byte[] applyMd5(byte[] bytes) throws NoSuchAlgorithmException {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+
+        return md5.digest(bytes);
     }
 }
