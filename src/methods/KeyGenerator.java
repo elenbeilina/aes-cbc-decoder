@@ -2,18 +2,15 @@ package methods;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
-import java.nio.charset.StandardCharsets;
-
 public class KeyGenerator {
     private long next;
 
-    public byte[] generateKey(long seconds) {
+    public String generateKey(long seconds) {
         next = seconds;
 
         long s = magicFunction();
-        String md5Hex = DigestUtils.md5Hex(String.valueOf(s));
 
-        return md5Hex.getBytes(StandardCharsets.UTF_8);
+        return DigestUtils.md5Hex(String.valueOf(s));
     }
 
     private long rand() {

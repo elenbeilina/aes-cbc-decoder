@@ -1,7 +1,10 @@
 package methods;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -10,6 +13,7 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -25,7 +29,7 @@ public class Descriptor {
 
     private static final String initVector = " ";
     private File encrypted;
-    private static final String decrypted = "decrypted.jpeg";
+    private String decrypted;
 
     public void decodeFile(File file) throws Exception {
         encrypted = file;
@@ -33,13 +37,15 @@ public class Descriptor {
 
         while (november.getMonth() == Month.NOVEMBER) {
             long second = november.toEpochSecond(ZoneOffset.UTC);
-            byte[] secretKey = new KeyGenerator().generateKey(second);
+            String secretKey = new KeyGenerator().generateKey(second);
+            decrypted = "decrypted_" + november + ".jpeg";
 
-            applyAES(secretKey);
+            byte[] result = applyAES(secretKey);
+            convertBytesToImage(result);
 
             if (isJPEG()) {
                 System.out.println("Hallelujah");
-                break;
+                //break;
             }
 
             november = november.plusSeconds(1);
@@ -47,52 +53,67 @@ public class Descriptor {
 
     }
 
-    public void applyAES(byte[] key) throws IOException {
+    public byte[] applyAES(String key) throws IOException {
         byte[] data = FileUtils.readFileToByteArray(encrypted);
 
         try {
-            IvParameterSpec iv = new IvParameterSpec(applyMd5(initVector.getBytes(StandardCharsets.UTF_8)));
-            SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
 
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, iv);
+            byte[] keyBytes = new byte[16];
+            byte[] b = new BASE64Decoder().decodeBuffer(key);
+            int len = b.length;
+            if (len > keyBytes.length)
+                len = keyBytes.length;
+            System.arraycopy(b, 0, keyBytes, 0, len);
 
-            byte[] base64data = Base64.decodeBase64(data);
+            byte[] keyBytesiv = new byte[16];
+            byte[] biv = new BASE64Decoder().decodeBuffer(DigestUtils.md5Hex(initVector));
+            int leniv = biv.length;
+            if (leniv > keyBytesiv.length)
+                leniv = keyBytesiv.length;
+            System.arraycopy(biv, 0, keyBytesiv, 0, len);
 
-            while (base64data.length % 16 != 0) {
-                base64data = add0(base64data);
-            }
+            SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+            IvParameterSpec ivSpec = new IvParameterSpec(keyBytesiv);
 
-            byte[] original = cipher.doFinal(base64data);
-            convertBytesToImage(original);
-        } catch (BadPaddingException e){
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+
+            return cipher.doFinal(data);
+        } catch (BadPaddingException e) {
             //wrong key, continue
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("decrypt fail!", e);
         }
+
+        return null;
     }
 
-    private void convertBytesToImage(byte[] arr) throws IOException {
-        ByteArrayInputStream bis = new ByteArrayInputStream(arr);
-        BufferedImage bImage2 = ImageIO.read(bis);
-        if(Objects.isNull(bImage2)){
-            return;
+    private void convertBytesToImage(byte[] arr) {
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(arr);
+            BufferedImage bImage2 = ImageIO.read(bis);
+            if (Objects.isNull(bImage2)) {
+                return;
+            }
+
+            File file = new File(decrypted);
+            if (file.createNewFile()) {
+                ImageIO.write(bImage2, "jpeg", file);
+            }
+        } catch (IOException e) {
+            //continue
         }
-        ImageIO.write(bImage2, "jpeg", new File(decrypted));
-    }
-
-    private byte[] add0(byte[] arr) {
-        byte[] destArray = Arrays.copyOf(arr, arr.length + 1);
-        destArray[destArray.length - 1] = 0;
-
-        return destArray;
     }
 
     private boolean isJPEG() throws Exception {
         File file = new File(decrypted);
-        DataInputStream ins = new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
 
-        return ins.readInt() == 0xffd8ffe0;
+        if (file.exists()) {
+            DataInputStream ins = new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
+
+            return ins.readInt() == 0xffd8ffe0;
+        }
+        return false;
     }
 }
