@@ -1,10 +1,8 @@
 package methods;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -13,17 +11,10 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
-
-import static utils.Util.applyMd5;
 
 public class Descriptor {
 
@@ -45,12 +36,11 @@ public class Descriptor {
 
             if (isJPEG()) {
                 System.out.println("Hallelujah");
-                //break;
+                break;
             }
 
             november = november.plusSeconds(1);
         }
-
     }
 
     public byte[] applyAES(String key) throws IOException {
@@ -59,26 +49,16 @@ public class Descriptor {
         try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
 
-            byte[] keyBytes = new byte[16];
-            byte[] b = new BASE64Decoder().decodeBuffer(key);
-            int len = b.length;
-            if (len > keyBytes.length)
-                len = keyBytes.length;
-            System.arraycopy(b, 0, keyBytes, 0, len);
-
-            byte[] keyBytesiv = new byte[16];
-            byte[] biv = new BASE64Decoder().decodeBuffer(DigestUtils.md5Hex(initVector));
-            int leniv = biv.length;
-            if (leniv > keyBytesiv.length)
-                leniv = keyBytesiv.length;
-            System.arraycopy(biv, 0, keyBytesiv, 0, len);
+            byte[] keyBytes = convertTo16Bytes(key);
+            byte[] ivBytes = convertTo16Bytes(DigestUtils.md5Hex(initVector));
 
             SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
-            IvParameterSpec ivSpec = new IvParameterSpec(keyBytesiv);
+            IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
 
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
 
             return cipher.doFinal(data);
+
         } catch (BadPaddingException e) {
             //wrong key, continue
         } catch (Exception e) {
@@ -87,6 +67,17 @@ public class Descriptor {
         }
 
         return null;
+    }
+
+    private byte[] convertTo16Bytes(String value) throws IOException {
+        byte[] bytes = new byte[16];
+        byte[] b = new BASE64Decoder().decodeBuffer(value);
+        int len = b.length;
+        if (len > bytes.length)
+            len = bytes.length;
+        System.arraycopy(b, 0, bytes, 0, len);
+
+        return bytes;
     }
 
     private void convertBytesToImage(byte[] arr) {
