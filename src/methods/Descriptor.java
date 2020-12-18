@@ -22,7 +22,7 @@ public class Descriptor {
     private File encrypted;
     private String decrypted;
 
-    public void decodeFile(File file) throws Exception {
+    public String decodeFile(File file) throws Exception {
         encrypted = file;
         LocalDateTime november = LocalDateTime.of(2020, Month.NOVEMBER, 1, 0, 0, 0);
 
@@ -41,6 +41,7 @@ public class Descriptor {
 
             november = november.plusSeconds(1);
         }
+        return decrypted;
     }
 
     public byte[] applyAES(String key) throws IOException {
