@@ -87,7 +87,9 @@ public class Descriptor {
 
             cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
 
-            return cipher.doFinal(dataWithZeros);
+            byte[] result = cipher.doFinal(dataWithZeros);
+
+            return removeZeroBytes(result);
 
         } catch (BadPaddingException e) {
             //wrong key, continue
@@ -97,6 +99,23 @@ public class Descriptor {
         }
 
         return null;
+    }
+
+    private byte[] removeZeroBytes(byte[] arr) {
+        // Remove zero bytes at the end.
+        int lastLength = arr.length;
+        for (int i = arr.length - 1; i > arr.length - 16; i--) {
+            if (arr[i] == (byte) 0) {
+                lastLength--;
+            } else {
+                break;
+            }
+        }
+
+        byte[] result = new byte[lastLength];
+        System.arraycopy(arr, 0, result, 0, lastLength);
+
+        return result;
     }
 
     private byte[] convertTo16Bytes(String value) throws IOException {
