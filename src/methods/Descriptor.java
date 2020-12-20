@@ -6,11 +6,13 @@ import sun.misc.BASE64Decoder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URLConnection;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
@@ -18,47 +20,74 @@ import java.util.Objects;
 
 public class Descriptor {
 
-    private static final String initVector = " ";
-    private File encrypted;
-    private String decrypted;
+    private byte[] dataWithZeros;
+    private IvParameterSpec ivSpec;
 
-    public String decodeFile(File file) throws Exception {
-        encrypted = file;
-        LocalDateTime november = LocalDateTime.of(2020, Month.NOVEMBER, 1, 0, 0, 0);
+    public void decodeFile(File file) throws Exception {
+        LocalDateTime start = LocalDateTime.now();
 
-        while (november.getMonth() == Month.NOVEMBER) {
-            long second = november.toEpochSecond(ZoneOffset.UTC);
-            String secretKey = new KeyGenerator().generateKey(second);
-            decrypted = "decrypted_" + november + ".jpeg";
+        prepareZeroPaddingData(file);
+        prepareIV();
 
-            byte[] result = applyAES(secretKey);
-            convertBytesToImage(result);
+        File decryptedFile = new File("decrypted");
 
-            if (isJPEG()) {
-                System.out.println("Hallelujah");
-                break;
+        for (int i = 0; i < 10; i++) {
+            LocalDateTime november = LocalDateTime.of(2020, Month.NOVEMBER, 1, 0, 0, 0);
+
+            while (november.getMonth() == Month.NOVEMBER) {
+                long second = november.toEpochSecond(ZoneOffset.UTC);
+                String secretKey = new KeyGenerator().generateKey(second);
+
+                byte[] result = applyAES(secretKey);
+                if (Objects.isNull(result)) {
+                    november = november.plusSeconds(1);
+                    continue;
+                }
+
+                FileUtils.writeByteArrayToFile(decryptedFile, result);
+
+                if (isJPEG(decryptedFile) || isJPEG(result)) {
+                    System.out.println("Hallelujah");
+                    break;
+                }
+
+                november = november.plusSeconds(1);
             }
-
-            november = november.plusSeconds(1);
         }
-        return decrypted;
+
+        System.out.println(Duration.between(start, LocalDateTime.now()).toMinutes());
     }
 
-    public byte[] applyAES(String key) throws IOException {
+    private void prepareZeroPaddingData(File encrypted) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException {
         byte[] data = FileUtils.readFileToByteArray(encrypted);
 
+        int blockSize = Cipher.getInstance("AES/CBC/NoPadding").getBlockSize();
+
+        int plaintextLength = data.length;
+        if (plaintextLength % blockSize != 0) {
+            plaintextLength = plaintextLength + (blockSize - (plaintextLength % blockSize));
+        }
+
+        dataWithZeros = new byte[plaintextLength];
+        System.arraycopy(data, 0, dataWithZeros, 0, data.length);
+    }
+
+    private void prepareIV() throws IOException {
+        byte[] ivBytes = convertTo16Bytes(DigestUtils.md5Hex(" "));
+
+        ivSpec = new IvParameterSpec(ivBytes);
+    }
+
+    public byte[] applyAES(String key) {
         try {
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
 
             byte[] keyBytes = convertTo16Bytes(key);
-            byte[] ivBytes = convertTo16Bytes(DigestUtils.md5Hex(initVector));
-
             SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
-            IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
 
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
 
-            return cipher.doFinal(data);
+            return cipher.doFinal(dataWithZeros);
 
         } catch (BadPaddingException e) {
             //wrong key, continue
@@ -81,31 +110,20 @@ public class Descriptor {
         return bytes;
     }
 
-    private void convertBytesToImage(byte[] arr) {
-        try {
-            ByteArrayInputStream bis = new ByteArrayInputStream(arr);
-            BufferedImage bImage2 = ImageIO.read(bis);
-            if (Objects.isNull(bImage2)) {
-                return;
-            }
+    private boolean isJPEG(File file) throws Exception {
+        DataInputStream ins = new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
 
-            File file = new File(decrypted);
-            if (file.createNewFile()) {
-                ImageIO.write(bImage2, "jpeg", file);
-            }
-        } catch (IOException e) {
-            //continue
-        }
+        return ins.readInt() == 0xffd8ffe0;
     }
 
-    private boolean isJPEG() throws Exception {
-        File file = new File(decrypted);
+    private boolean isJPEG(byte[] result) throws Exception {
+        InputStream is = new BufferedInputStream(new ByteArrayInputStream(result));
+        String mimeType = URLConnection.guessContentTypeFromStream(is);
 
-        if (file.exists()) {
-            DataInputStream ins = new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
-
-            return ins.readInt() == 0xffd8ffe0;
+        if (Objects.nonNull(mimeType)) {
+            System.out.println(mimeType);
         }
-        return false;
+
+        return Objects.nonNull(mimeType) && mimeType.equals("image/jpeg");
     }
 }

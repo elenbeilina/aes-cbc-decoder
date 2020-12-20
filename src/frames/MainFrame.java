@@ -41,8 +41,8 @@ public class MainFrame extends JFrame {
 
     public void decryptFile(Descriptor descriptor) {
         try {
-            String fileName = descriptor.decodeFile(fileChooser.getSelectedFile());
-            loadImageFile(new File(fileName));
+            descriptor.decodeFile(fileChooser.getSelectedFile());
+            //loadImageFile(new File(fileName));
             showInformationMessage(this, MESSAGE_DECRYPTION_COMPLETED);
         } catch (DecodeException e) {
             showErrorMessage(this, MESSAGE_DECRYPTION_ERROR, e.getMessage());
