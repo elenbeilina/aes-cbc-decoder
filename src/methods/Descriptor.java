@@ -22,11 +22,12 @@ public class Descriptor {
     private byte[] data;
     private IvParameterSpec ivSpec;
 
-    public void decodeFile(File file) throws Exception {
+    public File decodeFile(File file) throws Exception {
         LocalDateTime start = LocalDateTime.now();
 
         prepareIV();
         data = FileUtils.readFileToByteArray(file);
+        File decrypted = null;
 
         LocalDateTime november = LocalDateTime.of(2020, Month.NOVEMBER, 1, 0, 0, 0);
 
@@ -41,7 +42,7 @@ public class Descriptor {
             }
 
             if (isJPEG(result)) {
-                File decrypted = new File("decrypted_" + november);
+                decrypted = new File("decrypted_" + november);
                 FileUtils.writeByteArrayToFile(decrypted, result);
 
                 if(isJPEG(decrypted)){
@@ -53,7 +54,9 @@ public class Descriptor {
             november = november.plusSeconds(1);
         }
 
-        System.out.println(Duration.between(start, LocalDateTime.now()).toMinutes());
+        System.out.println(Duration.between(start, LocalDateTime.now()).toMillis());
+
+        return decrypted;
     }
 
     private void prepareIV() throws DecoderException {
